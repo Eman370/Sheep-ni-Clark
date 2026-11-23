@@ -1,0 +1,11 @@
+{
+  "endings": {
+    "eden": false,
+    "death": true,
+    "revelation": false,
+    "trueEnd": false
+  },
+  "seals_total": 1,
+  "watcher_defeated": false,
+  "god_mode": false
+}

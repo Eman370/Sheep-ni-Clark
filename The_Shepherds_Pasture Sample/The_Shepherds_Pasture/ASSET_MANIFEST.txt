@@ -1,0 +1,23 @@
+SPRITE ASSETS
+============
+
+Sheep
+- Sheep head Right.png
+- Sheep head Left.png
+- Sheep head Front.png
+- Sheep head Back.png
+- walking 1.png
+- walking 2.png
+
+World
+- Apple Sprite.png
+- Tree Sprite 1.png
+- Tree Sprite 2.png
+- Tree Sprite 3.png
+- Haunted Tree.png  <-- special eastern anomaly; touch it three times to enter Sheol
+
+Horror
+- Monster Sprite.png
+
+All images are loaded locally from this assets folder. Keep the filenames unchanged
+unless you also update the asset list and renderer in index.html.

@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#080b0b">
+<meta name="description" content="A quiet pastoral game with something watching from the trees.">
+<title>The Shepherd's Pasture</title>
+<style>
+  :root { color-scheme: dark; --mint:#a8e6cf; --red:#ff424e; --panel:rgba(9,14,15,.82); }
+  * { box-sizing:border-box; }
+  html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#050808; color:#eef2e9; font-family:Georgia, 'Times New Roman', serif; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }
+  #game { position:fixed; inset:0; width:100vw; height:100dvh; overflow:hidden; background:#0d1910; }
+  #world { position:absolute; inset:0; width:100%; height:100%; display:block; image-rendering:pixelated; outline:none; }
+  #topbar { position:absolute; z-index:5; left:0; right:0; top:0; min-height:62px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 16px; padding-top:max(10px, env(safe-area-inset-top)); background:linear-gradient(180deg,rgba(3,8,7,.88),rgba(3,8,7,.34)); border-bottom:1px solid rgba(218,236,206,.09); font-family:'Courier New',monospace; text-shadow:0 2px 5px #000; }
+  .hud-side { display:flex; align-items:center; gap:18px; min-width:0; }
+  .stat { display:flex; flex-direction:column; gap:2px; font-size:12px; letter-spacing:.7px; white-space:nowrap; }
+  .stat strong { color:#fff; font-size:14px; font-weight:700; }
+  #sigils { display:flex; gap:6px; font-size:11px; color:#707b78; }
+  .sigil.unlocked { color:var(--mint); text-shadow:0 0 8px rgba(168,230,207,.5); }
+  #realm { color:var(--mint); font-size:12px; text-align:right; letter-spacing:1px; white-space:nowrap; }
+  .toolset { display:flex; gap:7px; align-items:center; }
+  button { color:#eff4e8; background:rgba(18,30,25,.84); border:1px solid rgba(188,216,190,.25); padding:8px 11px; border-radius:5px; font:12px 'Courier New',monospace; cursor:pointer; }
+  button:hover { border-color:var(--mint); background:rgba(35,55,43,.9); }
+  button:active { transform:translateY(1px); }
+  #volume { width:76px; accent-color:var(--mint); vertical-align:middle; }
+  #lore { position:absolute; z-index:5; left:50%; transform:translateX(-50%); bottom:max(16px,env(safe-area-inset-bottom)); width:min(720px,calc(100vw - 32px)); padding:11px 15px; min-height:42px; background:rgba(7,14,11,.78); border:1px solid rgba(168,230,207,.18); border-left:3px solid #648f54; color:#d7e0d5; font:13px/1.45 'Courier New',monospace; text-align:center; backdrop-filter:blur(6px); text-shadow:0 1px 3px #000; }
+  #start, #end-screen, #codex, #console-panel, #scare { position:absolute; z-index:10; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; }
+  #start { background:radial-gradient(ellipse at center,rgba(10,28,17,.64),rgba(2,6,5,.94)); }
+  .title-card { width:min(560px,100%); padding:30px 28px; text-align:center; background:rgba(5,10,8,.9); border:1px solid rgba(168,230,207,.28); box-shadow:0 18px 80px #000; }
+  .eyebrow { font:11px 'Courier New',monospace; letter-spacing:3px; color:#a7bd9b; }
+  h1 { margin:12px 0 10px; font-size:clamp(31px,6vw,54px); line-height:1.03; font-weight:normal; color:#edf0d8; text-shadow:0 3px 22px rgba(171,209,130,.18); }
+  .subtitle { color:#aeb8aa; font:13px/1.6 'Courier New',monospace; margin:0 auto 22px; max-width:430px; }
+  .primary { background:#d9e2c4; color:#172018; border-color:#d9e2c4; padding:12px 26px; font-weight:bold; letter-spacing:1.5px; }
+  .primary:hover { color:#0b160c; background:#eff5db; }
+  .control-note { margin:20px 0 0; color:#78877c; font:11px/1.6 'Courier New',monospace; }
+  #end-screen { display:none; background:rgba(0,0,0,.72); }
+  #end-card { max-width:560px; width:100%; text-align:center; padding:32px 25px; background:rgba(5,8,8,.95); border:1px solid rgba(255,255,255,.15); box-shadow:0 12px 70px #000; }
+  #end-title { color:#f1e7d0; font-size:clamp(26px,5vw,40px); font-weight:normal; margin:0 0 14px; }
+  #end-copy { font:13px/1.7 'Courier New',monospace; color:#b5beb7; margin-bottom:22px; }
+  #codex, #console-panel { display:none; background:rgba(0,0,0,.78); backdrop-filter:blur(7px); }
+  .paper { width:min(760px,100%); max-height:min(78dvh,720px); display:flex; flex-direction:column; padding:20px; background:radial-gradient(circle at 50% 20%,#28211a,#0c0b09); border:3px ridge #70533b; box-shadow:0 0 50px rgba(0,0,0,.9); }
+  .panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#d7ab73; font:12px 'Courier New',monospace; letter-spacing:1px; padding-bottom:10px; border-bottom:1px dashed #70533b; }
+  #codex-text { overflow:auto; white-space:pre-wrap; color:#cfaa7b; font:13px/1.65 'Courier New',monospace; padding:14px 4px; }
+  #console-panel { z-index:12; }
+  .terminal { width:min(700px,100%); height:min(340px,70dvh); background:rgba(3,7,10,.97); border:1px solid #b62b42; box-shadow:0 0 36px rgba(255,20,60,.2); padding:15px; display:flex; flex-direction:column; }
+  #console-log { flex:1; overflow:auto; color:#a8e6cf; font:12px/1.5 'Courier New',monospace; white-space:pre-wrap; }
+  .terminal-entry { display:flex; align-items:center; border-top:1px solid #29333a; padding-top:10px; gap:8px; font:13px 'Courier New',monospace; }
+  .terminal-entry span { color:#ff425e; }
+  #console-input { flex:1; min-width:0; border:0; outline:0; background:transparent; color:white; font:13px 'Courier New',monospace; }
+  #scare { display:none; z-index:20; background:#090000; overflow:hidden; pointer-events:none; }
+  #scare img { width:min(92vw,1200px); max-height:92dvh; object-fit:contain; image-rendering:pixelated; filter:contrast(1.28) saturate(.72) drop-shadow(0 0 28px #9b0000); animation:scare-in .18s steps(2,end) both; }
+  #scare::before { content:''; position:absolute; inset:0; background:rgba(100,0,0,.23); animation:flash .16s steps(2,end) infinite; }
+  @keyframes scare-in { from { transform:scale(.35) rotate(-4deg); opacity:.1; } to { transform:scale(1.08); opacity:1; } }
+  @keyframes flash { 0%,100% { opacity:0; } 50% { opacity:.55; } }
+  #touch-controls { display:none; position:absolute; z-index:7; left:16px; bottom:max(82px,calc(env(safe-area-inset-bottom) + 72px)); width:146px; height:146px; pointer-events:none; }
+  .dpad { position:relative; width:146px; height:146px; pointer-events:auto; }
+  .dpad button { position:absolute; width:48px; height:48px; padding:0; border-radius:12px; background:rgba(10,18,14,.62); border-color:rgba(220,240,220,.28); font-size:20px; touch-action:none; }
+  .dpad [data-dir="up"] { left:49px; top:0; }
+  .dpad [data-dir="down"] { left:49px; bottom:0; }
+  .dpad [data-dir="left"] { left:0; top:49px; }
+  .dpad [data-dir="right"] { right:0; top:49px; }
+  #mobile-actions { display:none; position:absolute; z-index:7; right:18px; bottom:max(95px,calc(env(safe-area-inset-bottom) + 88px)); gap:9px; flex-direction:column; align-items:flex-end; }
+  #mobile-actions button { min-width:64px; min-height:46px; border-radius:50%; background:rgba(10,18,14,.62); touch-action:manipulation; }
+  .hidden { display:none !important; }
+  @media (hover:none), (pointer:coarse) {
+    #touch-controls, #mobile-actions { display:flex; }
+    #topbar { padding-left:10px; padding-right:10px; gap:7px; min-height:54px; }
+    .hud-side { gap:9px; }
+    .stat { font-size:10px; }
+    .stat strong { font-size:12px; }
+    #realm { font-size:10px; max-width:95px; white-space:normal; }
+    #volume-wrap { display:none; }
+    #lore { bottom:max(10px,env(safe-area-inset-bottom)); font-size:10px; padding:8px 9px; width:calc(100vw - 20px); }
+    .toolset button { padding:7px 8px; font-size:10px; }
+  }
+  @media (max-width:520px) {
+    #sigils { display:none; }
+    #realm { display:none; }
+    #touch-controls { transform:scale(.88); transform-origin:bottom left; left:7px; }
+    #mobile-actions { right:8px; transform:scale(.9); transform-origin:bottom right; }
+  }
+  @media (orientation:portrait) and (max-width:700px) {
+    .subtitle { font-size:11px; }
+    .title-card { padding:24px 18px; }
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="world" aria-label="The Shepherd's Pasture game"></canvas>
+  <div id="topbar">
+    <div class="hud-side">
+      <div class="stat"><strong id="score-top">FRUITS GATHERED: 0</strong><span id="score-bottom" style="color:#829087">/ 20</span></div>
+      <div id="sigils"><span id="sigil-eden">[LEAF]</span><span id="sigil-death">[VOID]</span><span id="sigil-revelation">[EYE]</span></div>
+    </div>
+    <div class="hud-side">
+      <div class="toolset" id="volume-wrap"><label for="volume" style="font-size:10px;color:#b9d5c6">VOL</label><input id="volume" type="range" min="0" max="1" step=".05" value=".45"></div>
+      <span id="realm">REALM: EDEN'S GROVE</span>
+      <div class="toolset">
+        <button id="codex-button" title="Open manuscript (C)">CODEX</button>
+        <button id="full-button" title="Toggle fullscreen">⛶</button>
+      </div>
+    </div>
+  </div>
+  <div id="lore">“The Lord is my shepherd; I shall not want. He maketh me to lie down in green pastures...”</div>
+
+  <div id="touch-controls"><div class="dpad">
+    <button data-dir="up" aria-label="Move up">▲</button><button data-dir="left" aria-label="Move left">◀</button>
+    <button data-dir="right" aria-label="Move right">▶</button><button data-dir="down" aria-label="Move down">▼</button>
+  </div></div>
+  <div id="mobile-actions"><button id="mobile-codex">C<br><small>BOOK</small></button><button id="mobile-full">⛶</button></div>
+
+  <div id="start">
+    <div class="title-card">
+      <div class="eyebrow">A PASTORAL SIMULATION</div>
+      <h1>The Shepherd's<br>Pasture</h1>
+      <p class="subtitle">A quiet grove. A small harvest. An eastern tree that should not be there.<br><br>Gather what the garden offers. Do not trust every shadow.</p>
+      <button class="primary" id="start-button">ENTER THE PASTURE</button>
+      <p class="control-note">WASD / ARROW KEYS TO MOVE · C TO OPEN THE MANUSCRIPT · F1 FOR CONSOLE<br>Touch controls appear on phones and tablets.</p>
+    </div>
+  </div>
+
+  <div id="end-screen"><div id="end-card"><h2 id="end-title"></h2><div id="end-copy"></div><button class="primary" id="restart-button">RETURN TO THE PASTURE</button></div></div>
+
+  <div id="codex"><div class="paper"><div class="panel-head"><span>~ TORN MANUSCRIPT OF THE ARCHIVES ~</span><button id="close-codex">CLOSE</button></div><div id="codex-text"></div></div></div>
+  <div id="console-panel"><div class="terminal"><div class="panel-head"><span>SYS_CONSOLE // PASTURE KERNEL</span><button id="close-console">CLOSE</button></div><div id="console-log">SYS_CONSOLE v3.0 [PYTHON_CORE]\nType 'help' for available administrative commands.\n--------------------------------------------------\n</div><div class="terminal-entry"><span>&gt;</span><input id="console-input" autocomplete="off" spellcheck="false" placeholder="enter command"></div></div></div>
+  <div id="scare"><img id="scare-image" src="/assets/Monster%20Sprite.png" alt="The Watcher"></div>
+</div>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('world');
+  const ctx = canvas.getContext('2d', { alpha:false });
+  const lightCanvas = document.createElement('canvas');
+  const lightCtx = lightCanvas.getContext('2d');
+  const $ = (id) => document.getElementById(id);
+  const startLayer = $('start'), endLayer = $('end-screen'), codexLayer = $('codex'), consoleLayer = $('console-panel'), scareLayer = $('scare');
+  const keys = new Set();
+  const pendingActions = [];
+  const assets = {};
+  const assetFiles = [
+    'Sheep head Right.png','Sheep head Left.png','Sheep head Front.png','Sheep head Back.png',
+    'walking 1.png','walking 2.png','Apple Sprite.png','Tree Sprite 1.png','Tree Sprite 2.png','Tree Sprite 3.png','Haunted Tree.png','Monster Sprite.png'
+  ];
+  const state = { current:null, previous:null, lastFetch:0, started:false, codexOpen:false, consoleOpen:false, paused:false, scareAt:0, lastRealm:'eden', lastDistance:9999, snapshotAt:0, lastTickAt:0 };
+  let cssW = window.innerWidth, cssH = window.innerHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
+  let audio = null, master = null, monsterDrone = null, monsterDroneGain = null, heartbeatAt = 0, proximityGain = 0;
+  const groundMarks = [];
+  let seed = 93929;
+  function rand() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+  for (let i=0;i<620;i++) groundMarks.push({x:rand()*3200,y:rand()*2200,r:1+rand()*2.5,a:.035+rand()*.075,ang:rand()*6.28});
+
+  function loadAssets() {
+    for (const name of assetFiles) {
+      const image = new Image(); image.src = '/assets/' + encodeURIComponent(name); assets[name] = image;
+    }
+  }
+  loadAssets();
+
+  function resize() {
+    cssW = Math.max(1, window.innerWidth); cssH = Math.max(1, window.innerHeight); dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(cssW*dpr); canvas.height = Math.round(cssH*dpr);
+    canvas.style.width = cssW+'px'; canvas.style.height = cssH+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.imageSmoothingEnabled = false;
+    lightCanvas.width = canvas.width; lightCanvas.height = canvas.height;
+    lightCtx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize, {passive:true}); resize();
+
+  async function apiTick() {
+    const now = performance.now();
+    const elapsed = state.lastTickAt ? Math.min(.075, Math.max(.005, (now-state.lastTickAt)/1000)) : 1/60;
+    state.lastTickAt = now;
+    const body = { keys:Array.from(keys), dt:elapsed, actions:pendingActions.splice(0), paused:state.paused };
+    try {
+      const response = await fetch('/api/tick', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
+      if (!response.ok) throw new Error('Game server returned '+response.status);
+      const next = await response.json();
+      state.previous = state.current;
+      state.current = next;
+      state.snapshotAt = performance.now();
+      handleEvents(next.events || []);
+      updateHud(next);
+    } catch (error) {
+      $('lore').textContent = 'The connection to the Python game engine was interrupted. Keep the game server window open and refresh this page.';
+      console.error(error);
+    }
+  }
+  let polling = false;
+  async function pollLoop() {
+    if (!polling) return;
+    await apiTick();
+    setTimeout(pollLoop, 16);
+  }
+  function queueAction(action) { pendingActions.push(action); }
+
+  function initAudio() {
+    if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    audio = new AC(); master = audio.createGain(); master.gain.value = Number($('volume').value); master.connect(audio.destination);
+    const noiseBuffer = audio.createBuffer(1, audio.sampleRate*2, audio.sampleRate);
+    const data = noiseBuffer.getChannelData(0); for (let i=0;i<data.length;i++) data[i] = Math.random()*2-1;
+    const noise = audio.createBufferSource(); noise.buffer = noiseBuffer; noise.loop = true;
+    const low = audio.createBiquadFilter(); low.type='lowpass'; low.frequency.value=165;
+    const droneGain = audio.createGain(); droneGain.gain.value=0;
+    const oscA = audio.createOscillator(); oscA.type='triangle'; oscA.frequency.value=48;
+    const oscB = audio.createOscillator(); oscB.type='sawtooth'; oscB.frequency.value=57;
+    const oscAG = audio.createGain(); oscAG.gain.value=.48; const oscBG = audio.createGain(); oscBG.gain.value=.13;
+    noise.connect(low); low.connect(droneGain); oscA.connect(oscAG); oscAG.connect(droneGain); oscB.connect(oscBG); oscBG.connect(droneGain); droneGain.connect(master);
+    noise.start(); oscA.start(); oscB.start(); monsterDrone={noise,low,oscA,oscB}; monsterDroneGain=droneGain;
+  }
+  function setMasterVolume(value) { if (master && audio) master.gain.setTargetAtTime(value,audio.currentTime,.03); }
+  $('volume').addEventListener('input', e => { initAudio(); setMasterVolume(Number(e.target.value)); });
+
+  function playDimensionScream() {
+    if (!audio) return; const now=audio.currentTime;
+    const buffer=audio.createBuffer(1,Math.floor(audio.sampleRate*2.2),audio.sampleRate), samples=buffer.getChannelData(0);
+    for(let i=0;i<samples.length;i++) samples[i]=(Math.random()*2-1)*(1-i/samples.length)*.9;
+    const src=audio.createBufferSource();src.buffer=buffer;
+    const filter=audio.createBiquadFilter();filter.type='bandpass';filter.Q.value=2.4;
+    filter.frequency.setValueAtTime(430,now);filter.frequency.exponentialRampToValueAtTime(2100,now+.48);filter.frequency.exponentialRampToValueAtTime(260,now+1.9);
+    const gain=audio.createGain();gain.gain.setValueAtTime(.001,now);gain.gain.linearRampToValueAtTime(.82,now+.14);gain.gain.setValueAtTime(.66,now+.55);gain.gain.exponentialRampToValueAtTime(.001,now+2.05);
+    src.connect(filter);filter.connect(gain);gain.connect(master);src.start(now);src.stop(now+2.1);
+    const sub=audio.createOscillator(), subGain=audio.createGain();sub.type='sawtooth';sub.frequency.setValueAtTime(92,now);sub.frequency.exponentialRampToValueAtTime(24,now+1.4);subGain.gain.setValueAtTime(.45,now);subGain.gain.exponentialRampToValueAtTime(.001,now+1.55);sub.connect(subGain);subGain.connect(master);sub.start(now);sub.stop(now+1.6);
+    const second=audio.createOscillator(), secondGain=audio.createGain();second.type='triangle';second.frequency.setValueAtTime(680,now+.08);second.frequency.exponentialRampToValueAtTime(115,now+1.25);secondGain.gain.setValueAtTime(.001,now);secondGain.gain.linearRampToValueAtTime(.22,now+.16);secondGain.gain.exponentialRampToValueAtTime(.001,now+1.3);second.connect(secondGain);secondGain.connect(master);second.start(now);second.stop(now+1.35);
+  }
+  function playJumpscare() {
+    if (!audio) return; const now=audio.currentTime;
+    const size=Math.floor(audio.sampleRate*.55),buffer=audio.createBuffer(1,size,audio.sampleRate),arr=buffer.getChannelData(0);
+    for(let i=0;i<size;i++) arr[i]=(Math.random()*2-1)*Math.pow(1-i/size,1.8);
+    const src=audio.createBufferSource();src.buffer=buffer;
+    const filter=audio.createBiquadFilter();filter.type='highpass';filter.frequency.value=700;
+    const g=audio.createGain();g.gain.setValueAtTime(.95,now);g.gain.exponentialRampToValueAtTime(.001,now+.52);src.connect(filter);filter.connect(g);g.connect(master);src.start(now);
+    const hit=audio.createOscillator(),hg=audio.createGain();hit.type='sawtooth';hit.frequency.setValueAtTime(120,now);hit.frequency.exponentialRampToValueAtTime(26,now+.42);hg.gain.setValueAtTime(.9,now);hg.gain.exponentialRampToValueAtTime(.001,now+.48);hit.connect(hg);hg.connect(master);hit.start(now);hit.stop(now+.5);
+  }
+  function playHeartbeat(intensity=1) {
+    if(!audio) return; const now=audio.currentTime;
+    [0,.16].forEach((offset,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(i?62:86,now+offset);o.frequency.exponentialRampToValueAtTime(28,now+offset+.17);g.gain.setValueAtTime((i?.36:.48)*intensity,now+offset);g.gain.exponentialRampToValueAtTime(.001,now+offset+.19);o.connect(g);g.connect(master);o.start(now+offset);o.stop(now+offset+.2);});
+  }
+  function updateAudio(s) {
+    if(!audio || !s || audio.state!=='running') return;
+    if(s.realm==='eden' || s.watcherDefeated || s.gameOver) { monsterDroneGain.gain.setTargetAtTime(0,audio.currentTime,.3);proximityGain=0;return; }
+    const d=Math.hypot(s.player.x-s.monster.x,s.player.y-s.monster.y);
+    const p=Math.max(0,Math.min(1,1-(d-90)/520));
+    const target=.015+p*p*.25;
+    monsterDroneGain.gain.setTargetAtTime(target,audio.currentTime,.18);
+    monsterDrone.low.frequency.setTargetAtTime(120+p*360,audio.currentTime,.2);
+    monsterDrone.oscA.frequency.setTargetAtTime(42+p*36,audio.currentTime,.2);
+    monsterDrone.oscB.frequency.setTargetAtTime(51+p*59,audio.currentTime,.2);
+    const now=performance.now();
+    const interval=1050-p*630;
+    if(p>.25 && now-heartbeatAt>interval) { playHeartbeat(.35+p*.9);heartbeatAt=now; }
+    proximityGain=p;
+  }
+  function handleEvents(events) {
+    for(const event of events) {
+      if(event.name==='dimension_transition') { initAudio();playDimensionScream();state.lastRealm=event.realm; }
+      else if(event.name==='jumpscare') { initAudio();playJumpscare();state.scareAt=performance.now();scareLayer.style.display='flex'; }
+      else if(event.name==='collect_fruit') { playCollect(true); }
+      else if(event.name==='collect_seal') { playCollect(false); }
+      else if(event.name==='ending') { if(event.ending==='trueEnd') playDimensionScream(); }
+      else if(event.name==='console') { appendConsole(event.message); }
+    }
+  }
+  function playCollect(soft) {
+    if(!audio) return; const now=audio.currentTime;
+    const notes=soft?[523.25,659.25,784]:[190,265,140];
+    notes.forEach((f,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.type=soft?'sine':'triangle';o.frequency.setValueAtTime(f,now+i*.05);g.gain.setValueAtTime(soft?.09:.15,now+i*.05);g.gain.exponentialRampToValueAtTime(.001,now+.28);o.connect(g);g.connect(master);o.start(now+i*.05);o.stop(now+.3);});
+  }
+
+  function updateHud(s) {
+    if(!s) return;
+    const eden=s.realm==='eden';
+    $('score-top').textContent=eden?`FRUITS GATHERED: ${s.score}`:`SEALS BROKEN: ${s.eyesCollected}`;
+    $('score-bottom').textContent=eden?'/ 20':`/ ${s.targetSeals}`;
+    $('realm').textContent=eden?(s.baseEndings.trueEnd?'REALM: CROWNED GROVE':(s.baseEndings.eden&&s.baseEndings.death?'REALM: CORRUPTED GROVE':"REALM: EDEN'S GROVE")):(s.realm==='pit'?'REALM: THE BOTTOMLESS PIT':'REALM: SHEOL // THE ABYSS');
+    $('realm').style.color=eden?'#a8e6cf':'#ff6870';
+    [['eden','sigil-eden'],['death','sigil-death'],['revelation','sigil-revelation']].forEach(([key,id])=>$(id).classList.toggle('unlocked',!!s.baseEndings[key]));
+    $('lore').textContent=s.lore||'';
+    $('codex-text').textContent=s.codex||'';
+    if(s.started) startLayer.style.display='none';
+    if(s.gameOver && endLayer.style.display!=='flex') showEnding(s);
+    if(!s.gameOver && endLayer.style.display==='flex') endLayer.style.display='none';
+    if(s.jumpscare && !s.gameOver) scareLayer.style.display='flex';
+    if((!s.jumpscare || s.gameOver) && scareLayer.style.display==='flex') scareLayer.style.display='none';
+    updateAudio(s);
+  }
+  function showEnding(s) {
+    const title=$('end-title'),copy=$('end-copy');
+    if(s.endReason==='eden') {title.textContent=s.baseEndings.trueEnd?'THE CROWNED SHEPHERD':'THE OBEDIENT SHEPHERD';copy.textContent='You tended the grove and completed the harvest. But the eastern tree is still waiting.';}
+    else if(s.endReason==='revelation') {title.textContent='BE NOT AFRAID.';copy.textContent='You broke the six seals and survived the revelation. The manuscript remembers.';}
+    else if(s.endReason==='trueEnd') {title.textContent='THE EIGHTH DAY // ROOT ACCESS GRANTED';copy.textContent='The root gate has been crossed. The Watcher no longer owns the path.';}
+    else {title.textContent='CAST INTO OUTER DARKNESS';copy.textContent='It followed when you looked away. The pasture has gone quiet.';}
+    endLayer.style.display='flex';
+    scareLayer.style.display='none';
+  }
+  function appendConsole(message) {
+    const log=$('console-log'); if(message==='__CLEAR__') {log.textContent='SYS_CONSOLE v3.0 [PYTHON_CORE]\n';return;}
+    log.textContent+='\n'+String(message);log.scrollTop=log.scrollHeight;
+  }
+
+  function openCodex(open) { state.codexOpen=open;state.paused=open||state.consoleOpen;codexLayer.style.display=open?'flex':'none';if(state.current)$('codex-text').textContent=state.current.codex; }
+  function openConsole(open) { state.consoleOpen=open;state.paused=open||state.codexOpen;consoleLayer.style.display=open?'flex':'none';if(open)$('console-input').focus(); }
+  function submitCommand(value) { if(!value.trim())return;appendConsole('> '+value);queueAction({command:value});$('console-input').value=''; }
+
+  $('start-button').addEventListener('click',()=>{initAudio();state.started=true;startLayer.style.display='none';queueAction('start');});
+  $('restart-button').addEventListener('click',()=>{endLayer.style.display='none';scareLayer.style.display='none';queueAction('restart');});
+  $('codex-button').addEventListener('click',()=>openCodex(!state.codexOpen));
+  $('mobile-codex').addEventListener('click',()=>openCodex(!state.codexOpen));
+  $('close-codex').addEventListener('click',()=>openCodex(false));
+  $('close-console').addEventListener('click',()=>openConsole(false));
+  $('console-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitCommand(e.target.value);else if(e.key==='Escape')openConsole(false);});
+  $('full-button').addEventListener('click',toggleFullscreen);$('mobile-full').addEventListener('click',toggleFullscreen);
+  function toggleFullscreen(){if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.();}
+
+  window.addEventListener('keydown',e=>{
+    const key=e.key.toLowerCase();
+    if(key==='f1'){e.preventDefault();openConsole(!state.consoleOpen);return;}
+    if(key==='c'&&!state.consoleOpen){e.preventDefault();openCodex(!state.codexOpen);return;}
+    if(state.consoleOpen||state.codexOpen)return;
+    if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(key))e.preventDefault();
+    keys.add(key);
+    if(key==='r'&&state.current?.gameOver){queueAction('restart');endLayer.style.display='none';}
+  },{passive:false});
+  window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+  window.addEventListener('blur',()=>keys.clear());
+  document.querySelectorAll('[data-dir]').forEach(button=>{
+    const keyMap={up:'w',down:'s',left:'a',right:'d'};const key=keyMap[button.dataset.dir];
+    button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);keys.add(key);initAudio();});
+    ['pointerup','pointercancel','lostpointercapture'].forEach(type=>button.addEventListener(type,()=>keys.delete(key)));
+  });
+  document.addEventListener('contextmenu',e=>e.preventDefault());
+
+  function cameraFor(s) {
+    const p=s.player;const world=s.world;
+    const x=world.width<=cssW?(world.width-cssW)*.5:Math.max(0,Math.min(world.width-cssW,p.x-cssW*.5));
+    const y=world.height<=cssH?(world.height-cssH)*.5:Math.max(0,Math.min(world.height-cssH,p.y-cssH*.5));
+    return {x,y};
+  }
+  function drawGround(s,cam) {
+    ctx.fillStyle=s.realm==='eden'?'#416d2f':(s.realm==='pit'?'#19090c':'#141013');ctx.fillRect(0,0,cssW,cssH);
+    if(s.realm==='eden'){
+      // Layered grass, low-contrast tufts and distant haze create 2D depth of field.
+      for(const mark of groundMarks){const x=mark.x-cam.x,y=mark.y-cam.y;if(x<-8||y<-8||x>cssW+8||y>cssH+8)continue;ctx.save();ctx.translate(x,y);ctx.rotate(mark.ang);ctx.fillStyle=`rgba(207,220,127,${mark.a})`;ctx.fillRect(-mark.r,-.6,mark.r*2,1.2);ctx.fillRect(-.5,-mark.r,1,mark.r*2);ctx.restore();}
+      const haze=ctx.createLinearGradient(0,0,0,cssH);haze.addColorStop(0,'rgba(207,231,150,.12)');haze.addColorStop(.58,'rgba(37,70,34,0)');haze.addColorStop(1,'rgba(7,23,13,.12)');ctx.fillStyle=haze;ctx.fillRect(0,0,cssW,cssH);
+      // A broken dirt track adds a visual route through the grove.
+      ctx.save();ctx.translate(-cam.x,-cam.y);ctx.strokeStyle='rgba(128,105,65,.19)';ctx.lineWidth=36;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(100,1160);ctx.bezierCurveTo(760,970,980,1460,1500,1180);ctx.bezierCurveTo(1930,960,2280,1320,3030,1080);ctx.stroke();ctx.strokeStyle='rgba(219,196,130,.08)';ctx.lineWidth=2;ctx.setLineDash([7,19]);ctx.stroke();ctx.restore();
+    } else {
+      for(const mark of groundMarks){const x=mark.x-cam.x,y=mark.y-cam.y;if(x<-8||y<-8||x>cssW+8||y>cssH+8)continue;ctx.fillStyle=`rgba(120,40,48,${mark.a*1.4})`;ctx.fillRect(x,y,mark.r*1.5,mark.r*1.5);}
+      ctx.save();ctx.translate(-cam.x,-cam.y);
+      for(let i=0;i<26;i++){const x=(i*157+83)%s.world.width,y=(i*251+77)%s.world.height;ctx.strokeStyle='rgba(165,28,42,.22)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+55+(i%4)*12,y+90);ctx.stroke();}
+      ctx.restore();
+      const red=ctx.createRadialGradient(cssW*.5,cssH*.45,30,cssW*.5,cssH*.45,Math.max(cssW,cssH)*.7);red.addColorStop(0,'rgba(110,12,20,.16)');red.addColorStop(1,'rgba(0,0,0,.36)');ctx.fillStyle=red;ctx.fillRect(0,0,cssW,cssH);
+    }
+  }
+  function shadow(x,y,rx,ry,alpha=.3,blur=10){ctx.save();ctx.fillStyle=`rgba(0,0,0,${alpha})`;ctx.shadowColor=`rgba(0,0,0,${alpha})`;ctx.shadowBlur=blur;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();ctx.restore();}
+  function drawTree(tree,cam,s) {
+    const x=tree.x-cam.x,y=tree.y-cam.y;const img=assets[tree.sprite];if(!img||!img.complete)return;
+    shadow(x,y-3,tree.width*.27,tree.width*.075,s.realm==='eden'?.28:.48,tree.width*.12);
+    ctx.save();if(tree.depth==='far'){ctx.globalAlpha=.82;ctx.filter='blur(1.45px) saturate(.82)';}else if(tree.depth==='mid'){ctx.filter='blur(.35px)';}
+    if(s.realm!=='eden')ctx.globalAlpha*=.82;
+    ctx.drawImage(img,x-tree.width/2,y-tree.height,tree.width,tree.height);ctx.restore();
+  }
+  function sheepSprite(p) {
+    const dir=p.dir||'down';
+    if(dir==='up')return {name:'Sheep head Back.png',w:62,h:94,flip:false};
+    if(dir==='down')return {name:'Sheep head Front.png',w:65,h:96,flip:false};
+    if(p.moving){const frame=Math.floor(p.anim||0)%2;return {name:frame?'walking 2.png':'walking 1.png',w:78,h:78,flip:dir==='left'};}
+    return {name:dir==='left'?'Sheep head Left.png':'Sheep head Right.png',w:78,h:78,flip:false};
+  }
+  function drawSheep(p,cam,s) {
+    const x=p.x-cam.x,y=p.y-cam.y;shadow(x,y+15,29,10,.42,13);
+    const spr=sheepSprite(p),img=assets[spr.name];if(!img||!img.complete)return;
+    ctx.save();if(spr.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(img,-spr.w/2,y-spr.h+20,spr.w,spr.h);}else ctx.drawImage(img,x-spr.w/2,y-spr.h+20,spr.w,spr.h);ctx.restore();
+    if(s.godMode){ctx.save();ctx.strokeStyle='rgba(255,218,87,.8)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y-17,35,0,Math.PI*2);ctx.stroke();ctx.restore();}
+  }
+  function drawApple(item,cam,forbidden=false) {
+    if(!item.active)return;const x=item.x-cam.x,y=item.y-cam.y;const size=forbidden?74:52;const img=assets['Apple Sprite.png'];
+    shadow(x,y+7,size*.33,size*.12,.4,11);
+    if(forbidden){const pulse=1+Math.sin(performance.now()*.004)*.12;const glow=ctx.createRadialGradient(x,y,2,x,y,size*.85*pulse);glow.addColorStop(0,'rgba(255,27,58,.44)');glow.addColorStop(1,'rgba(255,0,30,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,size*pulse,0,Math.PI*2);ctx.fill();}
+    if(img&&img.complete)ctx.drawImage(img,x-size/2,y-size/2,size,size);
+  }
+  function drawSeal(item,cam) {
+    if(!item.active)return;const x=item.x-cam.x,y=item.y-cam.y;shadow(x,y+9,19,6,.5,8);
+    const glow=ctx.createRadialGradient(x,y,2,x,y,35);glow.addColorStop(0,'rgba(255,90,105,.65)');glow.addColorStop(1,'rgba(255,0,30,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,35,0,Math.PI*2);ctx.fill();
+    ctx.save();ctx.fillStyle='#e7d9d3';ctx.beginPath();ctx.ellipse(x,y,17,10,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#8f1725';ctx.beginPath();ctx.arc(x,y,6.5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#080607';ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  function drawMonster(m,cam) {
+    const x=m.x-cam.x,y=m.y-cam.y,img=assets['Monster Sprite.png'];if(!img||!img.complete)return;
+    const w=246,h=w*img.height/img.width;shadow(x,y+34,79,19,.56,26);
+    ctx.save();ctx.filter=m.observed?'brightness(1.12)':'brightness(.82) saturate(.78)';ctx.drawImage(img,x-w/2,y-h+28,w,h);ctx.restore();
+  }
+  function drawAnomaly(a,cam) {
+    const x=a.x-cam.x,y=a.y-cam.y;ctx.save();const pulse=.5+.5*Math.sin(performance.now()*.002);ctx.strokeStyle=`rgba(109,0,20,${.28+pulse*.35})`;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x,y+5,54+pulse*6,20+pulse*3,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+  }
+  function drawPortal(p,cam) {
+    if(!p.active)return;const x=p.x-cam.x,y=p.y-cam.y,t=performance.now()*.001;
+    shadow(x,y+24,58,16,.6,18);ctx.save();ctx.translate(x,y);ctx.rotate(t*.25);ctx.strokeStyle='rgba(255,55,69,.8)';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(0,0,48+Math.sin(t*2)*4,76+Math.cos(t*1.5)*5,0,0,Math.PI*2);ctx.stroke();ctx.rotate(-t*.5);ctx.strokeStyle='rgba(217,183,157,.6)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,28,59,0,0,Math.PI*2);ctx.stroke();const g=ctx.createRadialGradient(0,0,3,0,0,55);g.addColorStop(0,'rgba(255,0,20,.48)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,55,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  function drawWorld(s) {
+    const cam=cameraFor(s);drawGround(s,cam);
+    // Scene objects are sorted by their ground contact line. This makes trees
+    // naturally pass in front of or behind the sheep while staying 2D.
+    const list=[];
+    for(const tree of s.trees)list.push({depth:tree.y,kind:'tree',value:tree});
+    if(s.realm==='eden'&&s.item.active)list.push({depth:s.item.y,kind:'apple',value:s.item});
+    if(s.realm==='eden'&&s.forbiddenFruit.active)list.push({depth:s.forbiddenFruit.y,kind:'forbidden',value:s.forbiddenFruit});
+    if(s.realm!=='eden'&&s.item.active)list.push({depth:s.item.y,kind:'seal',value:s.item});
+    if(s.realm!=='eden'&&!s.watcherDefeated){const cover=s.trees.find(t=>t.id===s.monster.hide_tree_id);const monsterDepth=s.monster.hidden&&cover?cover.y-2:s.monster.y+36;list.push({depth:monsterDepth,kind:'monster',value:s.monster});}
+    if(s.portal.active)list.push({depth:s.portal.y+65,kind:'portal',value:s.portal});
+    list.push({depth:s.player.y+20,kind:'player',value:s.player});
+    list.sort((a,b)=>a.depth-b.depth);
+    for(const entry of list){
+      if(entry.kind==='tree')drawTree(entry.value,cam,s);
+      else if(entry.kind==='apple')drawApple(entry.value,cam,false);
+      else if(entry.kind==='forbidden')drawApple(entry.value,cam,true);
+      else if(entry.kind==='seal')drawSeal(entry.value,cam);
+      else if(entry.kind==='monster')drawMonster(entry.value,cam);
+      else if(entry.kind==='portal')drawPortal(entry.value,cam);
+      else if(entry.kind==='player')drawSheep(entry.value,cam,s);
+    }
+    if(s.realm==='eden')drawAnomaly(s.anomaly,cam);
+    if(s.realm!=='eden')drawForwardVision(s,cam);
+    if(s.realm==='eden')drawEdenVignette();
+    if(s.jumpscare&&!s.gameOver)drawScareOverlay(s);
+    if(s.gameOver)drawEndCanvas(s);
+  }
+  function drawForwardVision(s,cam) {
+    const px=s.player.x-cam.x, py=s.player.y-cam.y;
+    const radius=Math.min(390,Math.max(285,Math.min(cssW,cssH)*.48));
+
+    // Render darkness + cutout on the offscreen lightCanvas so we don't erase the world canvas.
+    lightCtx.save();
+    lightCtx.globalCompositeOperation='source-over';
+    lightCtx.clearRect(0,0,cssW,cssH);
+    lightCtx.fillStyle='rgba(0,0,0,.975)';
+    lightCtx.fillRect(0,0,cssW,cssH);
+
+    lightCtx.globalCompositeOperation='destination-out';
+    const lamp=lightCtx.createRadialGradient(px,py,12,px,py,radius);
+    lamp.addColorStop(0,'rgba(0,0,0,1)');
+    lamp.addColorStop(.68,'rgba(0,0,0,.96)');
+    lamp.addColorStop(.88,'rgba(0,0,0,.62)');
+    lamp.addColorStop(1,'rgba(0,0,0,0)');
+    lightCtx.fillStyle=lamp;
+    lightCtx.beginPath();
+    lightCtx.arc(px,py,radius,0,Math.PI*2);
+    lightCtx.fill();
+
+    // Trees block the circle of light. Cast a soft-edged shadow away from the sheep.
+    lightCtx.globalCompositeOperation='source-over';
+    for(const tree of s.trees){
+      const tx=tree.x-cam.x, ty=tree.y-cam.y;
+      if(Math.hypot(tx-px,ty-py)>radius+tree.width)continue;
+      const cx=tx,cy=ty-tree.height*.43;
+      const vx=cx-px,vy=cy-py,len=Math.hypot(vx,vy)||1,ux=vx/len,uy=vy/len;
+      const pxv=-uy,pyv=ux;
+      const extent=Math.hypot(tree.width*.43*ux,tree.height*.43*uy);
+      const halfWidth=tree.width*.31;
+      const farX=cx+ux*extent,farY=cy+uy*extent;
+      const a=[farX+pxv*halfWidth,farY+pyv*halfWidth];
+      const b=[farX-pxv*halfWidth,farY-pyv*halfWidth];
+      const reach=radius*1.45;
+      const c=[b[0]+ux*reach,b[1]+uy*reach],d=[a[0]+ux*reach,a[1]+uy*reach];
+      lightCtx.save();
+      lightCtx.fillStyle='rgba(0,0,0,.96)';
+      lightCtx.shadowColor='rgba(0,0,0,.7)';
+      lightCtx.shadowBlur=tree.width*.13;
+      lightCtx.beginPath();
+      lightCtx.moveTo(a[0],a[1]);
+      lightCtx.lineTo(b[0],b[1]);
+      lightCtx.lineTo(c[0],c[1]);
+      lightCtx.lineTo(d[0],d[1]);
+      lightCtx.closePath();
+      lightCtx.fill();
+      lightCtx.restore();
+    }
+
+    // A subtle vignette keeps the lit circle readable without revealing the map.
+    const edge=lightCtx.createRadialGradient(px,py,radius*.55,px,py,radius*1.25);
+    edge.addColorStop(0,'rgba(0,0,0,0)');
+    edge.addColorStop(1,'rgba(0,0,0,.72)');
+    lightCtx.fillStyle=edge;
+    lightCtx.fillRect(0,0,cssW,cssH);
+    lightCtx.restore();
+
+    ctx.drawImage(lightCanvas,0,0,cssW,cssH);
+  }
+
+  function drawEdenVignette(){const g=ctx.createRadialGradient(cssW/2,cssH/2,Math.min(cssW,cssH)*.2,cssW/2,cssH/2,Math.max(cssW,cssH)*.72);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.23)');ctx.fillStyle=g;ctx.fillRect(0,0,cssW,cssH);}
+  function drawScareOverlay(s) {
+    const elapsed=performance.now()-(state.scareAt||performance.now());const img=assets['Monster Sprite.png'];
+    ctx.save();ctx.fillStyle=`rgba(80,0,8,${.58+Math.sin(elapsed*.045)*.2})`;ctx.fillRect(0,0,cssW,cssH);
+    if(img&&img.complete){const scale=1.2+Math.min(.5,elapsed/850);const w=Math.max(cssW*.9,Math.min(cssW*1.6,cssH*2.2))*scale;const h=w*img.height/img.width;ctx.translate((Math.random()-.5)*14,(Math.random()-.5)*14);ctx.drawImage(img,cssW/2-w/2,cssH/2-h/2,w,h);}
+    ctx.fillStyle='rgba(0,0,0,.42)';ctx.fillRect(0,0,cssW,cssH);ctx.fillStyle='#fff1eb';ctx.textAlign='center';ctx.font=`bold ${Math.max(18,Math.min(36,cssW*.05))}px Courier New`;ctx.fillText('IT FOUND YOU',cssW/2,cssH*.88);ctx.restore();
+  }
+  function drawEndCanvas(s) {
+    ctx.save();ctx.fillStyle='rgba(0,0,0,.48)';ctx.fillRect(0,0,cssW,cssH);
+    if(s.endReason==='death'){const img=assets['Monster Sprite.png'];if(img&&img.complete){const w=Math.min(cssW*.44,430),h=w*img.height/img.width;ctx.globalAlpha=.4;ctx.drawImage(img,cssW/2-w/2,cssH*.2,w,h);}}
+    ctx.restore();
+  }
+  function interpolateState() {
+    const current=state.current, previous=state.previous;
+    if(!current||!previous)return current;
+    const t=Math.max(0,Math.min(1,(performance.now()-state.snapshotAt)/38));
+    const smooth={...current,player:{...current.player},monster:{...current.monster}};
+    for(const key of ['x','y']){
+      if(previous.player&&current.player)smooth.player[key]=previous.player[key]+(current.player[key]-previous.player[key])*t;
+      if(previous.monster&&current.monster)smooth.monster[key]=previous.monster[key]+(current.monster[key]-previous.monster[key])*t;
+    }
+    return smooth;
+  }
+  function render() {
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;
+    const frame=interpolateState();
+    if(frame){drawWorld(frame);}else{ctx.fillStyle='#08100b';ctx.fillRect(0,0,cssW,cssH);}
+    requestAnimationFrame(render);
+  }
+
+  // Request first state, then run Python's authoritative tick at 30 Hz.
+  async function boot(){
+    try{const r=await fetch('/api/state',{cache:'no-store'});state.current=await r.json();updateHud(state.current);}catch(e){$('lore').textContent='Unable to reach the Python game engine. Start the game with run_game.bat.';}
+    polling=true;pollLoop();requestAnimationFrame(render);
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
